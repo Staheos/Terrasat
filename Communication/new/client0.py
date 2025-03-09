@@ -40,7 +40,8 @@ class mylora(LoRa):
     def __init__(self, verbose=True):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
-        # self.set_dio_mapping([0] * 6)
+        self.set_dio_mapping([0] * 6)
+        self.var = 0
 
     def on_rx_done(self):
         BOARD.led_on()
@@ -61,9 +62,12 @@ class mylora(LoRa):
             print("Sending payload: " + str(sending_payload))
             print("Sent payload: " + str(self.write_payload(sending_payload)))
             self.set_mode(MODE.TX)
+        elif mens == "ACK":
+            print("Received ACK")
         time.sleep(1)
-        self.reset_ptr_rx()
-        self.set_mode(MODE.RXCONT)
+        self.var = 1
+        # self.reset_ptr_rx()
+        # self.set_mode(MODE.RXCONT)
 
     def on_tx_done(self):
         print("\nTxDone")
@@ -72,10 +76,12 @@ class mylora(LoRa):
     def on_cad_done(self):
         print("\non_CadDone")
         print(self.get_irq_flags())
+        self.var = 1
 
     def on_rx_timeout(self):
         print("\non_RxTimeout")
         print(self.get_irq_flags())
+        self.var = 1
 
     def on_valid_header(self):
         print("\non_ValidHeader")
@@ -91,10 +97,12 @@ class mylora(LoRa):
 
     def start(self):
         while True:
+            self.var = 0
             self.reset_ptr_rx()
             self.set_mode(MODE.RXCONT)  # Receiver mode
-            while True:
-                pass;
+            while self.var == 0:
+                time.sleep(0.1)
+            print("Resetting loop")
 
 
 lora = mylora()

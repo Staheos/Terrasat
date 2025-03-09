@@ -21,6 +21,8 @@
 # You should have received a copy of the GNU General Public License along with pySX127.  If not, see
 # <http://www.gnu.org/licenses/>.
 
+import json
+import hashlib
 import time
 from SX127x.LoRa import *
 # from SX127x.LoRaArgumentParser import LoRaArgumentParser
@@ -38,7 +40,7 @@ class mylora(LoRa):
     def __init__(self, verbose=True):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
-        # self.set_dio_mapping([0] * 6)
+        self.set_dio_mapping([0] * 6)
         self.var = 0
 
     def on_rx_done(self):
@@ -46,14 +48,25 @@ class mylora(LoRa):
         print("\nRxDone")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
-        print(f"Recv payload: {payload}")
+        recv_hash = hashlib.sha1(bytes(payload)).hexdigest()
+        print(f"Recv payload: {recv_hash}   {payload}")
         print(bytes(payload).decode("utf-8", 'ignore'))  # Receive DATA
         BOARD.led_off()
         time.sleep(1)  # Wait for the client be ready
-        print("Send: ACK")
-        self.write_payload([255, 255, 0, 0, 65, 67, 75, 0])  # Send ACK
-        # self.write_payload(get_message_bytes("ACK"))
-        self.set_mode(MODE.TX)
+        try:
+            ack = {
+                "type": "ACK",
+                "hash": recv_hash,
+                "sig": "TERRASAT"
+            }
+            ack_payload = get_message_bytes(frame(json.dumps(ack)))
+            # self.write_payload([255, 255, 0, 0, 65, 67, 75, 0])  # Send ACK
+            print("Sending ACK: " + str(ack["hash"]))
+            print("Sent ACK: " + str(self.write_payload(ack_payload)))
+            self.set_mode(MODE.TX)
+        except Exception as e:
+            print(f"ACK Error: {e}")
+        time.sleep(0.5)
         self.var = 1
 
     def on_tx_done(self):
@@ -83,16 +96,25 @@ class mylora(LoRa):
     def start(self):
         while True:
             while (self.var == 0):
-                time.sleep(1)
-                print("Send: INF")
-                # print("Sent payload: " + str(self.write_payload(get_message_bytes("INF"))))
-                payload = get_message_bytes("INF")
-                print("Sending payload: " + str(payload))
-                payload = [255, 255, 0, 0, 73, 78, 70, 0]
-                print("Sending payload: " + str(payload))
-                print("Sent payload: " + str(self.write_payload(payload)))
-                self.set_mode(MODE.TX)
-                time.sleep(1)  # there must be a better solution but sleep() works
+                try:
+                    print("Send SYN")
+                    syn = {
+                        "type": "SYN",
+                        "sig": "TERRASAT",
+                        "data": "ANY"
+                    }
+                    # print("Sent payload: " + str(self.write_payload(get_message_bytes("INF"))))
+                    syn_payload = get_message_bytes(frame(json.dumps(syn)))
+                    print("Sending payload: " + str(syn_payload))
+                    # payload = [255, 255, 0, 0, 73, 78, 70, 0]
+                    # print("Sending payload: " + str(payload))
+                    print("Sent payload: " + str(self.write_payload(syn_payload)))
+                    self.set_mode(MODE.TX)
+                    # wait for data request to be sent
+                    time.sleep(1)  # there must be a better solution but sleep() works
+                except Exception as e:
+                    print(f"SYN Error: {e}")
+
                 self.reset_ptr_rx()
                 self.set_mode(MODE.RXCONT)  # Receiver mode
 
@@ -104,7 +126,7 @@ class mylora(LoRa):
             self.var = 0
             self.reset_ptr_rx()
             self.set_mode(MODE.RXCONT)  # Receiver mode
-            time.sleep(10)
+            time.sleep(0.5)
 
 
 lora = mylora()
