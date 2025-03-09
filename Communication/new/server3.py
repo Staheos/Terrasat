@@ -35,15 +35,15 @@ BOARD.reset()
 
 
 class mylora(LoRa):
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=True):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
-        self.set_dio_mapping([0] * 6)
+        # self.set_dio_mapping([0] * 6)
         self.var = 0
 
     def on_rx_done(self):
         BOARD.led_on()
-        # print("\nRxDone")
+        print("\nRxDone")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
         print(f"Recv payload: {payload}")
@@ -83,6 +83,7 @@ class mylora(LoRa):
     def start(self):
         while True:
             while (self.var == 0):
+                time.sleep(1)
                 print("Send: INF")
                 # print("Sent payload: " + str(self.write_payload(get_message_bytes("INF"))))
                 payload = get_message_bytes("INF")
@@ -96,27 +97,31 @@ class mylora(LoRa):
                 self.set_mode(MODE.RXCONT)  # Receiver mode
 
                 start_time = time.time()
-                while (time.time() - start_time < 3):  # wait until receive data or 3s
+                while (time.time() - start_time < 4):  # wait until receive data or 3s
                     pass;
 
+            print("Resetting loop")
             self.var = 0
             self.reset_ptr_rx()
             self.set_mode(MODE.RXCONT)  # Receiver mode
             time.sleep(10)
 
 
-lora = mylora(verbose=False)
+lora = mylora()
 # args = parser.parse_args(lora) # configs in LoRaArgumentParser.py
 
 #     Slow+long range  Bw = 125 kHz, Cr = 4/8, Sf = 4096chips/symbol, CRC on. 13 dBm
 lora.set_pa_config(pa_select=1, max_power=21, output_power=15)
 lora.set_bw(BW.BW125)
 lora.set_coding_rate(CODING_RATE.CR4_8)
-lora.set_spreading_factor(12)
+lora.set_spreading_factor(10)
 lora.set_rx_crc(True)
 # lora.set_lna_gain(GAIN.G1)
 # lora.set_implicit_header_mode(False)
 lora.set_low_data_rate_optim(True)
+
+lora.set_pa_dac(1)
+lora.set_ocp_trim(140)
 
 #  Medium Range  Defaults after init are 434.0MHz, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on 13 dBm
 # lora.set_pa_config(pa_select=1)

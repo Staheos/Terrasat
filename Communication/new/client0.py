@@ -37,14 +37,14 @@ BOARD.reset()
 
 
 class mylora(LoRa):
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=True):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
-        self.set_dio_mapping([0] * 6)
+        # self.set_dio_mapping([0] * 6)
 
     def on_rx_done(self):
         BOARD.led_on()
-        # print("\nRxDone")
+        print("\nRxDone")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)  # Receive INF
         print(f"Recv payload: {payload}")
@@ -54,12 +54,14 @@ class mylora(LoRa):
         BOARD.led_off()
         if mens == "INF":
             print("Received data request INF")
-            time.sleep(2)
-            print("Send mens: DATA RASPBERRY PI")
-            # self.write_payload([255, 255, 0, 0, 68, 65, 84, 65, 32, 82, 65, 83, 80, 66, 69, 82, 82, 89, 32, 80, 73,0])  # Send DATA RASPBERRY PI
-            print("Sent payload" + str(self.write_payload(get_message_bytes("DATA RASPBERRY PI"))))
+            time.sleep(1)
+            sending_payload = get_message_bytes("DATA RASPBERRY PI")
+            print("Sending payload: " + str(sending_payload))
+            sending_payload = [255, 255, 0, 0, 68, 65, 84, 65, 32, 82, 65, 83, 80, 66, 69, 82, 82, 89, 32, 80, 73, 0]
+            print("Sending payload: " + str(sending_payload))
+            print("Sent payload: " + str(self.write_payload(sending_payload)))
             self.set_mode(MODE.TX)
-        time.sleep(2)
+        time.sleep(1)
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)
 
@@ -95,18 +97,21 @@ class mylora(LoRa):
                 pass;
 
 
-lora = mylora(verbose=False)
+lora = mylora()
 # args = parser.parse_args(lora) # configs in LoRaArgumentParser.py
 
 #     Slow+long range  Bw = 125 kHz, Cr = 4/8, Sf = 4096chips/symbol, CRC on. 13 dBm
 lora.set_pa_config(pa_select=1, max_power=21, output_power=15)
 lora.set_bw(BW.BW125)
 lora.set_coding_rate(CODING_RATE.CR4_8)
-lora.set_spreading_factor(12)
+lora.set_spreading_factor(10)
 lora.set_rx_crc(True)
 # lora.set_lna_gain(GAIN.G1)
 # lora.set_implicit_header_mode(False)
 lora.set_low_data_rate_optim(True)
+
+lora.set_pa_dac(1)
+lora.set_ocp_trim(140)
 
 #  Medium Range  Defaults after init are 434.0MHz, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on 13 dBm
 # lora.set_pa_config(pa_select=1)
