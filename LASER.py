@@ -6,18 +6,13 @@ import socket
 import Framer
 
 
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect(('localhost', 1769))
-
-data_in: bytearray = bytearray()
-
 def decode_distance(data: bytes):
     distance = int.from_bytes(data[5:7]) / 10 # convert to meters
     return distance
 
 def initialize_uart() -> serial.Serial:
     """Initialize the UART connection for the laser rangefinder module"""
-    ser = serial.Serial(
+    new_serial = serial.Serial(
         #port='/dev/serial0',  # Use '/dev/serial0' or '/dev/ttyS0' depending on your setup
         port='/dev/ttyUSB0',
         baudrate=115200,
@@ -26,7 +21,7 @@ def initialize_uart() -> serial.Serial:
         stopbits=serial.STOPBITS_ONE,
         timeout=1
     )
-    return ser
+    return new_serial
 
 def enable_module():
     """Enable the laser rangefinder module using GPIO 26 (Pin 37)."""
@@ -64,55 +59,53 @@ def stop_continuous_ranging(ser):
     response = send_command(ser, command)
     return response
 
-enable_module()
-ser = initialize_uart()
 
-try:
-    if ser.is_open:
-        print("UART connection established with laser rangefinder module.")
-        start_continuous_ranging(ser)
+while True:
+    try:
+        data_in: bytearray = bytearray()
 
-        while True:
-            serial_waiting = ser.in_waiting
-            if serial_waiting > 0:
-                data_in.extend(ser.read(serial_waiting))
+        enable_module()
+        ser = initialize_uart()
 
-            if len(data_in) >= 14:
-                packet = data_in[0:14]
-                data_in = data_in[14:]
-                print(packet.hex())
-                print(decode_distance(packet))
-                timestamp = int(time.time() * 1000)
-                message = "LASER:" + str(decode_distance(packet)) + "&" + str(timestamp) + "&" + str(packet.hex())
-                client_socket.sendall(("HEAD" + message + "FOOT").encode(encoding="utf-8", errors="strict"))
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('localhost', 1769))
 
+        if ser.is_open:
+            print("UART connection established with laser rangefinder module.")
+            start_continuous_ranging(ser)
 
-        # user_input = input("Enter command (single/continuous/stop/exit): ").lower()
-        # if user_input == 'single' or user_input == '' or user_input.isnumeric():
-        #     response = get_single_ranging(ser)
-        # elif user_input == 'continuous':
-        #     response = get_continuous_ranging(ser)
-        # elif user_input == 'stop':
-        #     response = stop_continuous_ranging(ser)
-        # elif user_input == 'exit':
-        #     break
-        # else:
-        #     print("Invalid command. Try again.")
-        #     continue
+            while True:
+                serial_waiting = ser.in_waiting
+                if serial_waiting > 0:
+                    data_in.extend(ser.read(serial_waiting))
 
-        # print("Received:", response.hex())
-        # print("Distance:", decode_distance(response))
-        #client_socket.sendall(str(decode_distance(response)).encode("utf-8", errors="strict"))
-        # open("measurements.txt", "a").write(f"{user_input}: [{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}]  {(decode_distance(response))}\n")
+                if len(data_in) >= 14:
+                    packet = data_in[0:14]
+                    data_in = data_in[14:]
+                    print(packet.hex())
+                    print(decode_distance(packet))
+                    timestamp = int(time.time() * 1000)
+                    message = "LASER:" + str(decode_distance(packet)) + "&" + str(timestamp) + "&" + str(packet.hex())
+                    client_socket.sendall(("HEAD" + message + "FOOT").encode(encoding="utf-8", errors="strict"))
 
+        else:
+            print("Failed to open UART connection.")
+            disable_module()
+            ser.close()
+    except KeyboardInterrupt:
+        stop_continuous_ranging(ser)
+        disable_module()
         ser.close()
-        disable_module()
-    else:
-        print("Failed to open UART connection.")
-        disable_module()
-except KeyboardInterrupt:
-    stop_continuous_ranging(ser)
-    disable_module()
-    ser.close()
-    print("Exiting...")
-
+        print("Exiting...")
+        break
+    except Exception as e:
+        print(f"Error: {e}")
+        try:
+            open("laser_errors.txt", "a").write(f"[{datetime.datetime.now()}]  {e}\n")
+            if ser != None and ser.is_open:
+                stop_continuous_ranging(ser)
+            disable_module()
+            # ser.close()
+            time.sleep(3)
+        except Exception as e2:
+            print(f"Fatal: {e2}")
