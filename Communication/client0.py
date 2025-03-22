@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """ This program sends a response whenever it receives the "INF" """
-
+import queue
 # Copyright 2018 Rui Silva.
 #
 # This file is part of rpsreal/pySX127x, fork of mayeranalytics/pySX127x.
@@ -21,6 +21,7 @@
 # You should have received a copy of the GNU General Public License along with pySX127.  If not, see
 # <http://www.gnu.org/licenses/>.
 
+import queue
 import time
 from SX127x.LoRa import LoRa2 as LoRa
 # from SX127x.LoRaArgumentParser import LoRaArgumentParser
@@ -37,11 +38,12 @@ BOARD.reset()
 
 
 class mylora(LoRa):
-    def __init__(self, verbose=True):
+    def __init__(self, packet_queue, verbose=True):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([0] * 6)
         self.var = 0
+        self.packet_queue = packet_queue
 
     def on_rx_done(self):
         BOARD.led_on()
@@ -56,10 +58,18 @@ class mylora(LoRa):
         if mens == "INF":
             print("Received data request INF")
             time.sleep(1)
-            sending_payload = get_message_bytes("DATA RASPBERRY PI")
+            packet = ""
+            for _ in range(0, 10):
+                if self.packet_queue.empty():
+                    break
+                packet += self.packet_queue.get(block=True, timeout=1)
+            print(f"Empty: {self.packet_queue.qsize()}")
+            self.packet_queue.task_done()
+            print("Sending: " + str(packet))
+            sending_payload = get_message_bytes(packet)
             print("Sending payload: " + str(sending_payload))
-            sending_payload = [255, 255, 0, 0, 68, 65, 84, 65, 32, 82, 65, 83, 80, 66, 69, 82, 82, 89, 32, 80, 73, 0]
-            print("Sending payload: " + str(sending_payload))
+            # sending_payload = [255, 255, 0, 0, 68, 65, 84, 65, 32, 82, 65, 83, 80, 66, 69, 82, 82, 89, 32, 80, 73, 0]
+            # print("Sending payload: " + str(sending_payload))
             print("Sent payload: " + str(self.write_payload(sending_payload)))
             self.set_mode(MODE.TX)
         elif mens == "ACK":
@@ -103,39 +113,3 @@ class mylora(LoRa):
             while self.var == 0:
                 time.sleep(0.1)
             print("Resetting loop")
-
-
-lora = mylora()
-# args = parser.parse_args(lora) # configs in LoRaArgumentParser.py
-
-#     Slow+long range  Bw = 125 kHz, Cr = 4/8, Sf = 4096chips/symbol, CRC on. 13 dBm
-lora.set_pa_config(pa_select=1, max_power=21, output_power=15)
-lora.set_bw(BW.BW125)
-lora.set_coding_rate(CODING_RATE.CR4_8)
-lora.set_spreading_factor(10)
-lora.set_rx_crc(True)
-# lora.set_lna_gain(GAIN.G1)
-# lora.set_implicit_header_mode(False)
-lora.set_low_data_rate_optim(True)
-
-lora.set_pa_dac(1)
-lora.set_ocp_trim(140)
-
-#  Medium Range  Defaults after init are 434.0MHz, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on 13 dBm
-# lora.set_pa_config(pa_select=1)
-
-
-assert (lora.get_agc_auto_on() == 1)
-
-try:
-    print("START")
-    lora.start()
-except KeyboardInterrupt:
-    sys.stdout.flush()
-    print("Exit")
-    sys.stderr.write("KeyboardInterrupt\n")
-finally:
-    sys.stdout.flush()
-    print("Exit")
-    lora.set_mode(MODE.SLEEP)
-BOARD.teardown()

@@ -21,6 +21,7 @@
 # You should have received a copy of the GNU General Public License along with pySX127.  If not, see
 # <http://www.gnu.org/licenses/>.
 
+import sys
 import json
 import hashlib
 import time
@@ -97,21 +98,21 @@ class mylora(LoRa):
         while True:
             while (self.var == 0):
                 try:
-                    print("Send SYN")
+                    # print("Send SYN")
                     syn = {
                         "type": "SYN",
                         "sig": "TERRASAT",
                         "data": "ANY"
                     }
-                    # print("Sent payload: " + str(self.write_payload(get_message_bytes("INF"))))
+                    print("Sent payload: " + str(self.write_payload(get_message_bytes("INF"))))
                     syn_payload = get_message_bytes(frame(json.dumps(syn)))
-                    print("Sending payload: " + str(syn_payload))
+                    # print("Sending payload: " + str(syn_payload))
                     # payload = [255, 255, 0, 0, 73, 78, 70, 0]
                     # print("Sending payload: " + str(payload))
-                    print("Sent payload: " + str(self.write_payload(syn_payload)))
+                    # print("Sent payload: " + str(self.write_payload(syn_payload)))
                     self.set_mode(MODE.TX)
                     # wait for data request to be sent
-                    time.sleep(1)  # there must be a better solution but sleep() works
+                    time.sleep(0.2)  # there must be a better solution but sleep() works
                 except Exception as e:
                     print(f"SYN Error: {e}")
 
@@ -130,17 +131,18 @@ class mylora(LoRa):
 
 
 lora = mylora()
+lora.set_sync_word(0x68)
 # args = parser.parse_args(lora) # configs in LoRaArgumentParser.py
 
 #     Slow+long range  Bw = 125 kHz, Cr = 4/8, Sf = 4096chips/symbol, CRC on. 13 dBm
-lora.set_pa_config(pa_select=1, max_power=21, output_power=15)
-lora.set_bw(BW.BW125)
-lora.set_coding_rate(CODING_RATE.CR4_8)
-lora.set_spreading_factor(10)
+lora.set_pa_config(pa_select=1, max_power=21, output_power=20)
+lora.set_bw(BW.BW500)
+lora.set_coding_rate(CODING_RATE.CR4_7)
+lora.set_spreading_factor(8)
 lora.set_rx_crc(True)
 # lora.set_lna_gain(GAIN.G1)
-# lora.set_implicit_header_mode(False)
-lora.set_low_data_rate_optim(True)
+lora.set_implicit_header_mode(False)
+lora.set_low_data_rate_optim(False)
 
 lora.set_pa_dac(1)
 lora.set_ocp_trim(140)
