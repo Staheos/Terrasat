@@ -57,14 +57,17 @@ class mylora(LoRa):
         BOARD.led_off()
         if mens == "INF":
             print("Received data request INF")
-            time.sleep(1)
+            time.sleep(0.2)
             packet = ""
             for _ in range(0, 10):
                 if self.packet_queue.empty():
                     break
                 packet += self.packet_queue.get(block=True, timeout=1)
-            print(f"Empty: {self.packet_queue.qsize()}")
-            self.packet_queue.task_done()
+            if packet == "":
+                packet = "NODATA"
+            else:
+                self.packet_queue.task_done()
+            # packet += "\r\n"
             print("Sending: " + str(packet))
             sending_payload = get_message_bytes(packet)
             print("Sending payload: " + str(sending_payload))
@@ -74,10 +77,8 @@ class mylora(LoRa):
             self.set_mode(MODE.TX)
         elif mens == "ACK":
             print("Received ACK")
-        time.sleep(1)
+        time.sleep(0.7)
         self.var = 1
-        # self.reset_ptr_rx()
-        # self.set_mode(MODE.RXCONT)
 
     def on_tx_done(self):
         print("\nTxDone")
@@ -111,5 +112,6 @@ class mylora(LoRa):
             self.reset_ptr_rx()
             self.set_mode(MODE.RXCONT)  # Receiver mode
             while self.var == 0:
-                time.sleep(0.1)
+                time.sleep(0.05)
             print("Resetting loop")
+            assert (self.get_agc_auto_on() == 1)

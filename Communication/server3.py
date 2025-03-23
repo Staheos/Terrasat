@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """ This program asks a client for data and waits for the response, then sends an ACK. """
-
+import datetime
 # Copyright 2018 Rui Silva.
 #
 # This file is part of rpsreal/pySX127x, fork of mayeranalytics/pySX127x.
@@ -49,25 +49,28 @@ class mylora(LoRa):
         print("\nRxDone")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
+        payload = payload[2:-1]  # to discard \x00\x00 and \x00 at the end
         recv_hash = hashlib.sha1(bytes(payload)).hexdigest()
         print(f"Recv payload: {recv_hash}   {payload}")
+        open("received.txt", "a").write(f"{datetime.datetime.now().isoformat()}" + bytes(payload).decode("utf-8", 'ignore') + "\r\n")
         print(bytes(payload).decode("utf-8", 'ignore'))  # Receive DATA
         BOARD.led_off()
-        time.sleep(1)  # Wait for the client be ready
+        # time.sleep(0.1)  # Wait for the client be ready
         try:
-            ack = {
-                "type": "ACK",
-                "hash": recv_hash,
-                "sig": "TERRASAT"
-            }
-            ack_payload = get_message_bytes(frame(json.dumps(ack)))
-            # self.write_payload([255, 255, 0, 0, 65, 67, 75, 0])  # Send ACK
-            print("Sending ACK: " + str(ack["hash"]))
-            print("Sent ACK: " + str(self.write_payload(ack_payload)))
-            self.set_mode(MODE.TX)
+            pass
+        #     ack = {
+        #         "type": "ACK",
+        #         "hash": recv_hash,
+        #         "sig": "TERRASAT"
+        #     }
+        #     ack_payload = get_message_bytes(frame(json.dumps(ack)))
+        #     # self.write_payload([255, 255, 0, 0, 65, 67, 75, 0])  # Send ACK
+        #     print("Sending ACK: " + str(ack["hash"]))
+        #     print("Sent ACK: " + str(self.write_payload(ack_payload)))
+        #     self.set_mode(MODE.TX)
         except Exception as e:
             print(f"ACK Error: {e}")
-        time.sleep(0.5)
+        # time.sleep(0.5)
         self.var = 1
 
     def on_tx_done(self):
@@ -99,20 +102,20 @@ class mylora(LoRa):
             while (self.var == 0):
                 try:
                     # print("Send SYN")
-                    syn = {
-                        "type": "SYN",
-                        "sig": "TERRASAT",
-                        "data": "ANY"
-                    }
+                    # syn = {
+                    #     "type": "SYN",
+                    #     "sig": "TERRASAT",
+                    #     "data": "ANY"
+                    # }
                     print("Sent payload: " + str(self.write_payload(get_message_bytes("INF"))))
-                    syn_payload = get_message_bytes(frame(json.dumps(syn)))
+                    # syn_payload = get_message_bytes(frame(json.dumps(syn)))
                     # print("Sending payload: " + str(syn_payload))
                     # payload = [255, 255, 0, 0, 73, 78, 70, 0]
                     # print("Sending payload: " + str(payload))
                     # print("Sent payload: " + str(self.write_payload(syn_payload)))
                     self.set_mode(MODE.TX)
                     # wait for data request to be sent
-                    time.sleep(0.2)  # there must be a better solution but sleep() works
+                    time.sleep(0.1)  # there must be a better solution but sleep() works
                 except Exception as e:
                     print(f"SYN Error: {e}")
 
@@ -120,14 +123,13 @@ class mylora(LoRa):
                 self.set_mode(MODE.RXCONT)  # Receiver mode
 
                 start_time = time.time()
-                while (time.time() - start_time < 4):  # wait until receive data or 3s
+                while (time.time() - start_time < 0.3):  # wait until receive data or 3s
                     pass;
 
             print("Resetting loop")
             self.var = 0
             self.reset_ptr_rx()
             self.set_mode(MODE.RXCONT)  # Receiver mode
-            time.sleep(0.5)
 
 
 lora = mylora()
