@@ -90,8 +90,8 @@ while True:
                     open("laser.txt", "a").write(f"{datetime.datetime.now().isoformat()}  {decode_distance(packet)}\n")
 
                     # message = "LASER:" + str(decode_distance(packet)) + "&" + str(timestamp) + "&" + str(packet.hex())
-                    # message = "LASER:" + str(decode_distance(packet)) + "&" + str(timestamp)
-                    message = "LASER:LASER" + "0000"
+                    message = "LASER:" + str(timestamp) + "&" + str(decode_distance(packet))
+                    # message = "LASER:LASER" + "0000"
                     client_socket.sendall(("HEAD" + message + "FOOT").encode(encoding="utf-8", errors="strict"))
 
         else:

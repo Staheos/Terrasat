@@ -31,7 +31,7 @@ class ServerReceiver(threading.Thread):
             if foot == -1:
                 continue
 
-            data: bytearray = self.received[head + len(b"HEAD"):foot]
+            data: bytearray = self.received[head : foot + len(b"FOOT")]
             self.received = self.received[foot + len(b"FOOT"):]
             print(f"Received: {data.decode()}")
 

@@ -25,7 +25,7 @@ class CommunicationClient(threading.Thread):
                 self.lora.set_sync_word(0x68)
                 self.lora.set_pa_config(pa_select=1, max_power=21, output_power=20)
                 self.lora.set_bw(BW.BW500)
-                self.lora.set_coding_rate(CODING_RATE.CR4_7)
+                self.lora.set_coding_rate(CODING_RATE.CR4_5)
                 self.lora.set_spreading_factor(8)
                 self.lora.set_rx_crc(True)
                 # self.lora.set_lna_gain(GAIN.G1)

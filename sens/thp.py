@@ -17,14 +17,16 @@ while True:
         client_socket.connect(('localhost', 1769))
 
         while True:
-            temperature = f"{bmp280.temperature:.2f}"
-            pressure = f"{bmp280.pressure:.2f}"
-            altitude = f"{bmp280.altitude:.2f}"
+            temperature = str(int(bmp280.temperature * 100))
+            pressure = str(int(bmp280.pressure * 100))
+            altitude = str(int(bmp280.altitude * 100))
 
             timestamp = int(time.time() * 1000)
-            message = "BMP:" + temperature + "&" + pressure + "&" + altitude + "&" + str(timestamp)
+
+            message = "BMP:" + str(timestamp) + "&" + temperature + "&" + pressure + "&" + altitude
             print(message)
             client_socket.sendall(("HEAD" + message + "FOOT").encode(encoding="utf-8", errors="strict"))
+            open("bmp_data.txt", 'a').write(message + '\n')
 
             time.sleep(0.4)
 

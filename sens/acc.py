@@ -75,65 +75,6 @@ def quaternion_to_azimuth_elevation(w, x, y, z):
     return azimuth_deg, elevation_deg
 
 
-def quaternion_to_rotation_matrix(w, x, y, z):
-    """
-    Convert a quaternion into a 3x3 rotation matrix.
-    """
-    # Normalize the quaternion to avoid numerical issues
-    norm = np.sqrt(w*w + x*x + y*y + z*z)
-    w, x, y, z = w / norm, x / norm, y / norm, z / norm
-
-    # Construct rotation matrix
-    # Reference: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Rotation_matrices
-    rot_matrix = np.array([
-        [1 - 2*(y**2 + z**2),     2*(x*y - z*w),         2*(x*z + y*w)],
-        [2*(x*y + z*w),           1 - 2*(x**2 + z**2),   2*(y*z - x*w)],
-        [2*(x*z - y*w),           2*(y*z + x*w),         1 - 2*(x**2 + y**2)]
-    ])
-    return rot_matrix
-
-def get_global_coordinates_from_sensor(w, x, y, z, distance, axis='x'):
-    """
-    Given a quaternion (w, x, y, z) describing orientation,
-    and a distance along a chosen sensor axis ('x', 'y', or 'z'),
-    returns the global coordinates of that point.
-    """
-    # Define the local direction vector based on which axis the distance is along
-    local_vec = {
-        'x': np.array([distance, 0.0, 0.0]),
-        'y': np.array([0.0, distance, 0.0]),
-        'z': np.array([0.0, 0.0, distance])
-    }[axis.lower()]
-
-    # Get rotation matrix from quaternion
-    R = quaternion_to_rotation_matrix(w, x, y, z)
-
-    # Rotate the local vector to the global frame
-    global_vec = R.dot(local_vec)
-    return global_vec
-
-
-
-def quaternion_to_euler(quat_i, quat_j, quat_k, quat_real):
-    # Roll (x-axis rotation)
-    sinr_cosp = 2 * (quat_real * quat_i + quat_j * quat_k)
-    cosr_cosp = 1 - 2 * (quat_i * quat_i + quat_j * quat_j)
-    roll = math.atan2(sinr_cosp, cosr_cosp)
-
-    # Pitch (y-axis rotation)
-    sinp = 2 * (quat_real * quat_j - quat_k * quat_i)
-    if abs(sinp) >= 1:
-        pitch = math.copysign(math.pi / 2, sinp)  # Use 90 degrees if out of range
-    else:
-        pitch = math.asin(sinp)
-
-    # Yaw (z-axis rotation)
-    siny_cosp = 2 * (quat_real * quat_k + quat_i * quat_j)
-    cosy_cosp = 1 - 2 * (quat_j * quat_j + quat_k * quat_k)
-    yaw = math.atan2(siny_cosp, cosy_cosp)
-
-    return roll, pitch, yaw
-
 while True:
     try:
         i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
@@ -154,7 +95,7 @@ while True:
 
         acceleration_time = 100
         gyroscope_time = 100
-        magnetometer_time = 100
+        magnetometer_time = 1000
         rotation_vector_time = 1
 
         acceleration_count = 0
@@ -191,7 +132,6 @@ while True:
             # y = distance * math.cos(pitch) * math.cos(roll)
             # z = distance * math.sin(roll) #* math.cos(pitch)
 
-
             azimuth, elevation = quaternion_to_azimuth_elevation(quat_real, quat_i, quat_j, quat_k)
             x, z, y, = compute_3d_coordinates(distance, azimuth, elevation)
 
@@ -218,6 +158,7 @@ while True:
                 message += "HEAD" + rotation_vector + "FOOT"
 
             # print(message)
+            open("bno_data.txt", 'a').write(message + '\n')
             client_socket.sendall((message).encode(encoding="utf-8", errors="strict"))
 
             acceleration_count = (acceleration_count + 1) % acceleration_time
