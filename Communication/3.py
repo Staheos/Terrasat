@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 """ This program asks a client for data and waits for the response, then sends an ACK. """
-import datetime
 # Copyright 2018 Rui Silva.
 #
 # This file is part of rpsreal/pySX127x, fork of mayeranalytics/pySX127x.
@@ -24,11 +23,21 @@ import datetime
 import sys
 import json
 import hashlib
+import datetime
+import xml.etree.ElementTree as ET
+import queue
 import time
 from SX127x.LoRa import *
 # from SX127x.LoRaArgumentParser import LoRaArgumentParser
 from SX127x.board_config import BOARD
 from util import *
+
+
+def coord_to_float(coord) -> float:
+    return float(coord) / 10000000
+
+gps_points = []
+
 
 BOARD.setup()
 BOARD.reset()
@@ -38,11 +47,12 @@ BOARD.reset()
 
 
 class mylora(LoRa):
-    def __init__(self, verbose=True):
+    def __init__(self, receiving_queue: queue.Queue, verbose=True):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([0] * 6)
         self.var = 0
+        self.receive_queue = receiving_queue
 
     def on_rx_done(self):
         print("\nRxDone")
@@ -52,7 +62,23 @@ class mylora(LoRa):
         recv_hash = hashlib.sha1(bytes(payload)).hexdigest()
         print(f"Recv payload: {recv_hash}   {payload}")
         open("received.txt", "a").write(f"{datetime.datetime.now().isoformat()}  " + bytes(payload).decode("utf-8", 'ignore') + "\r\n")
-        print(bytes(payload).decode("utf-8", 'ignore'))
+
+        received = bytes(payload)
+        if received.find(b"HEAD") == -1:
+            print(f"Can't decode: {bytes(payload).decode('utf-8', 'ignore')}")
+
+        while True:
+            head = received.find(b"HEAD")
+            if head == -1:
+                break
+            foot = received.find(b"FOOT")
+            if foot == -1:
+                break
+            message = received[head + len(b"HEAD") : foot].decode("utf-8", 'replace')
+            received = received[foot+4 :]
+            self.receive_queue.put(message)
+            print(f"Received: {message}")
+
         # self.set_mode(MODE.SLEEP)
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)
@@ -92,8 +118,24 @@ class mylora(LoRa):
             # self.reset_ptr_rx()
             # self.set_mode(MODE.RXCONT)  # Receiver mode
 
+            if not self.receive_queue.empty():
+                packet: str = self.receive_queue.get()
+                if packet.startswith("GPS:"):
+                    split = packet[4:].split("&")
+                    timestamp = int(split[0])
+                    lat = coord_to_float(split[1])
+                    lat_dir = split[2]
+                    lon = coord_to_float(split[3])
+                    lon_dir = split[4]
+                    alt = -1
+                    if (len(split) > 5):
+                        alt = coord_to_float(split[5])
+                    iso_time = datetime.datetime.fromtimestamp(timestamp / 1000).isoformat()
+                    gps_points.append((lat, lon, iso_time))
 
-lora = mylora()
+
+receiving_queue = queue.Queue()
+lora = mylora(receiving_queue)
 lora.set_sync_word(0x68)
 # args = parser.parse_args(lora) # configs in LoRaArgumentParser.py
 
@@ -120,6 +162,31 @@ try:
     print("START")
     lora.start()
 except KeyboardInterrupt:
+    # Build GPX XML
+    gpx = ET.Element("gpx", attrib={
+        "version": "1.1",
+        "creator": "Terrasat",
+        "xmlns": "http://www.topografix.com/GPX/1/1",
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation": "http://www.topografix.com/GPX/1/1 "
+                              "http://www.topografix.com/GPX/1/1/gpx.xsd"
+    })
+
+    trk = ET.SubElement(gpx, "trk")
+    name = ET.SubElement(trk, "name")
+    name.text = "GPS Track"
+    trkseg = ET.SubElement(trk, "trkseg")
+
+    for lat, lon, time in gps_points:
+        trkpt = ET.SubElement(trkseg, "trkpt", attrib={"lat": str(lat), "lon": str(lon)})
+        ET.SubElement(trkpt, "time").text = time
+
+    # Save to .gpx file
+    tree = ET.ElementTree(gpx)
+    with open("gps.gpx", "wb") as f:
+        tree.write(f, encoding="utf-8", xml_declaration=True)
+    print("✅ GPX file 'output.gpx' created successfully!")
+
     sys.stdout.flush()
     print("Exit")
     sys.stderr.write("KeyboardInterrupt\n")
