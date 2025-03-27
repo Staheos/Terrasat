@@ -13,43 +13,98 @@ def log(message: any):
     except Exception as e:
         print(f"log() error: {e}")
 
+def kill_process(pid: int = -1, name: str = "this should never be in any of the process names"):
+    try:
+        for p in psutil.process_iter():
+
+            if p.pid == pid or name in p.name() or name in ' '.join(p.cmdline()):
+                p.terminate()
+                p.wait(1)
+    except Exception as e:
+        log(f"kill_process() error: {e}")
+
 while True:
-    # List all process IDs
-    pids = psutil.pids()
-    log(pids)
+    # time.sleep(5)
 
-    gps_running = False
+    communication_running = False
     bmp_running = False
+    laser_running = False
+    bno_running = False
+    gps_running = False
 
-    for pid in pids:
-        p = psutil.Process(pid)
-        log(p.name())
-        if (p.name() != "python3"):
-            continue
-        log(p.cmdline())
+    try:
+        # List all process IDs
+        pids = psutil.pids()
+        log(pids)
 
-        if "/home/dietpi/gps.py" in p.cmdline():
-            log("GPS process found")
-            gps_running = True
+        for pid in pids:
+            p = psutil.Process(pid)
+            if (p.name() != "python3"):
+                continue
+            log(p.name())
+            log(p.cmdline())
 
-        if "/home/dietpi/sens/bmp.py" in p.cmdline():
-            log("BMP process found")
-            bmp_running = True
+            for arg in p.cmdline():
+                if "server.py" in arg:
+                    log("Communication process found")
+                    communication_running = True
 
-    if gps_running:
-        log("GPS already running")
+                if "bmp.py" in arg:
+                    log("BMP process found")
+                    bmp_running = True
+
+                if "LASER.py" in arg:
+                    log("Laser process found")
+                    laser_running = True
+
+                if "bno.py" in arg:
+                    log("BNO process found")
+                    bno_running = True
+
+                if "gps.py" in arg:
+                    log("GPS process found")
+                    gps_running = True
+    except Exception as e:
+        log(f"Error checking processes: {e}")
+        continue
+
+    if communication_running:
+        log("Communication already running")
     else:
-        log("GPS process not found, starting it")
-        os.popen("sudo python3 /home/dietpi/gps.py")
+        log("Starting communication process")
+        os.popen("cd /home/dietpi/Communication && sudo python3 server.py &")
+        # subprocess.Popen()
+        time.sleep(5)
 
     if bmp_running:
         log("BMP already running")
     else:
-        log("BMP process not found, starting it")
-        # os.popen("sudo /home/dietpi/sens/env/bin/python3 /home/dietpi/sens/bmp.py")
+        log("Starting BMP process")
+        os.popen("cd /home/dietpi/bmp && sudo python3 bmp.py &")
+        time.sleep(5)
+
+    if laser_running:
+        log("Laser already running")
+    else:
+        log("Starting Laser process")
+        # os.popen("cd /home/dietpi/laser && sudo python3 LASER.py &")
+        # time.sleep(5)
+
+    if bno_running:
+        log("BNO already running")
+    else:
+        log("Starting BNO process")
+        # os.popen("cd /home/dietpi/bno && sudo python3 bno.py &")
+        # time.sleep(5)
+
+    if gps_running:
+        log("GPS already running")
+    else:
+        log("Starting GPS process")
+        os.popen("cd /home/dietpi/gps && sudo python3 gps.py &")
+        time.sleep(5)
 
     time.sleep(5)
-
 
         # subprocess.Popen("python3 /home/dietpi/gps.py", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 

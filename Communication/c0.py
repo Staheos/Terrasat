@@ -20,7 +20,7 @@ BOARD.reset()
 
 
 class mylora(LoRa):
-    def __init__(self, packet_queue: queue.Queue, verbose=True):
+    def __init__(self, packet_queue: queue.Queue, verbose=is_debug()):
         super(mylora, self).__init__(verbose)
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([0, 0, 0, 0, 0, 0])

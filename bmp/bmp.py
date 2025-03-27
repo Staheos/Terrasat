@@ -28,7 +28,7 @@ while True:
             client_socket.sendall(("HEAD" + message + "FOOT").encode(encoding="utf-8", errors="strict"))
             open("bmp_data.txt", 'a').write(message + '\n')
 
-            time.sleep(0.4)
+            time.sleep(0.8)
 
     except KeyboardInterrupt:
         print("Exiting...")

@@ -3,9 +3,11 @@ import sys
 import socket
 import queue
 import time
+from util import *
 from client0 import *
 from SX127x.constants import MODE, BW, CODING_RATE
 
+@thread_error_exit
 class CommunicationClient(threading.Thread):
     def __init__(self, stopq: queue.Queue, packet_queue: queue.Queue):
         threading.Thread.__init__(self, args=(), kwargs={})
@@ -15,8 +17,9 @@ class CommunicationClient(threading.Thread):
         self.received = bytearray()
         self.lora = mylora(packet_queue)
 
+    @thread_error_exit
     def run(self) -> None:
-        print("CommunicationClient started")
+        log("CommunicationClient started")
         while True:
             try:
                 # args = parser.parse_args(lora) # configs in LoRaArgumentParser.py
@@ -41,20 +44,20 @@ class CommunicationClient(threading.Thread):
                 assert (self.lora.get_agc_auto_on() == 1)
 
                 try:
-                    print("START")
+                    log("START")
                     self.lora.start()
                 except KeyboardInterrupt:
-                    sys.stdout.flush()
-                    print("Exit")
-                    sys.stderr.write("KeyboardInterrupt\n")
+                    # sys.stdout.flush()
+                    log("Exit")
+                    # sys.stderr.write("KeyboardInterrupt\n")
                 finally:
-                    sys.stdout.flush()
-                    print("Exit")
+                    # sys.stdout.flush()
+                    log("Exit")
                     self.lora.set_mode(MODE.SLEEP)
                     BOARD.teardown()
             except Exception as e:
-                print(f"Error: {e}")
+                log(f"Error: {e}")
                 time.sleep(3)
-                print("Rerunning CommunicationClient")
+                log("Rerunning CommunicationClient")
 
-        print("CommunicationClient finished")
+        log("CommunicationClient finished")

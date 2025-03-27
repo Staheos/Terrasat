@@ -5,7 +5,6 @@ import datetime
 import socket
 import board
 import math
-import adafruit_bmp280
 import busio
 from adafruit_bno08x.i2c import BNO08X_I2C
 from adafruit_bno08x import (

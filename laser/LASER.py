@@ -3,7 +3,6 @@ import serial
 import time
 import RPi.GPIO as GPIO
 import socket
-import Framer
 
 
 def decode_distance(data: bytes):

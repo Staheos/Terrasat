@@ -2,7 +2,10 @@ import threading
 import socket
 import queue
 import time
+from util import *
 
+
+@thread_error_exit
 class ServerReceiver(threading.Thread):
     def __init__(self, client_socket: socket.socket, stopq: queue.Queue, packet_queue):
         threading.Thread.__init__(self)
@@ -12,6 +15,7 @@ class ServerReceiver(threading.Thread):
         # self.daemon = True
         self.received = bytearray()
 
+    @thread_error_exit
     def run(self) -> None:
         while True:
             recv = self.client_socket.recv(16)
@@ -33,8 +37,8 @@ class ServerReceiver(threading.Thread):
 
             data: bytearray = self.received[head : foot + len(b"FOOT")]
             self.received = self.received[foot + len(b"FOOT"):]
-            print(f"Received: {data.decode()}")
+            log(f"Received: {data.decode()}")
 
             self.packet_queue.put(data.decode())
-            print(self.packet_queue.qsize())
+            log(self.packet_queue.qsize())
             # self.packet_queue.task_done()

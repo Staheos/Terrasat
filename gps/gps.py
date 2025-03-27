@@ -37,7 +37,7 @@ def parse_gsv(line) -> str:
     return ret
 
 
-def parse_gps_data(data):
+def parse_gps_data(data) -> any:
     """Parse NMEA sentence and extract GPS information."""
     try:
         msg = pynmea2.parse(data)
@@ -67,7 +67,7 @@ def parse_gps_data(data):
             return msg
     except pynmea2.ParseError as e:
         print(f"Failed to parse NMEA sentence: {e}")
-        return ""
+    return None
 
 while True:
     try:
@@ -117,6 +117,8 @@ while True:
                     open("gps_satellites.txt", "a").write(f"[{datetime.datetime.now()}]  {parse_gsv(line)}\n")
                 elif line.startswith("$GNRMC") or line.startswith("$GPGGA") or line.startswith("$GNGGA"):
                     msg = parse_gps_data(line)
+                    if msg == "" or msg is None or msg.latitude == 0 or msg.longitude == 0 or msg.latitude is None or msg.longitude is None:
+                        continue
                     message = f"{coord_to_int(msg.latitude)}&{msg.lat_dir}&{coord_to_int(msg.longitude)}&{msg.lon_dir}"
                     if hasattr(msg, "altitude") and hasattr(msg, "altitude_units"):
                         message += f"&{coord_to_int(msg.altitude)}&{msg.altitude_units}"
