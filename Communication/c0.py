@@ -28,16 +28,16 @@ class mylora(LoRa):
         self.packet_queue = packet_queue
 
     def on_rx_done(self):
-        print("\nRxDone")
+        log("\nRxDone")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)  # Receive INF
-        print(f"Recv payload: {payload}")
+        log(f"Recv payload: {payload}")
         mens = bytes(payload).decode("utf-8", 'ignore')
         mens = mens[2:-1]  # to discard \x00\x00 and \x00 at the end
-        print(mens)
+        log(mens)
         BOARD.led_off()
         if mens == "INF":
-            print("Received data request INF")
+            log("Received data request INF")
             # time.sleep(0.05)
             packet = ""
             for _ in range(0, 10):
@@ -51,49 +51,49 @@ class mylora(LoRa):
             else:
                 self.packet_queue.task_done()
             # packet += "\r\n"
-            print("Sending: " + str(packet))
+            log("Sending: " + str(packet))
             sending_payload = get_message_bytes(packet)
-            print("Sending payload: " + str(sending_payload))
+            log("Sending payload: " + str(sending_payload))
             # sending_payload = [255, 255, 0, 0, 68, 65, 84, 65, 32, 82, 65, 83, 80, 66, 69, 82, 82, 89, 32, 80, 73, 0]
-            # print("Sending payload: " + str(sending_payload))
-            print("Sent payload: " + str(self.write_payload(sending_payload)))
+            # log("Sending payload: " + str(sending_payload))
+            log("Sent payload: " + str(self.write_payload(sending_payload)))
             self.set_mode(MODE.TX)
         elif mens == "ACK":
-            print("Received ACK")
+            log("Received ACK")
         time.sleep(0.3)
         self.var = 1
 
     def on_tx_done(self):
-        print("\nTxDone")
-        print(self.get_irq_flags())
+        log("\nTxDone")
+        log(self.get_irq_flags())
 
     def on_cad_done(self):
-        print("\non_CadDone")
-        print(self.get_irq_flags())
+        log("\non_CadDone")
+        log(self.get_irq_flags())
         self.var = 1
 
     def on_rx_timeout(self):
-        print("\non_RxTimeout")
-        print(self.get_irq_flags())
+        log("\non_RxTimeout")
+        log(self.get_irq_flags())
         self.var = 1
 
     def on_valid_header(self):
-        print("\non_ValidHeader")
-        print(self.get_irq_flags())
+        log("\non_ValidHeader")
+        log(self.get_irq_flags())
 
     def on_payload_crc_error(self):
-        print("\non_PayloadCrcError")
-        print(self.get_irq_flags())
+        log("\non_PayloadCrcError")
+        log(self.get_irq_flags())
 
     def on_fhss_change_channel(self):
-        print("\non_FhssChangeChannel")
-        print(self.get_irq_flags())
+        log("\non_FhssChangeChannel")
+        log(self.get_irq_flags())
 
     def start(self):
         while True:
             self.var = 0
             while self.var == 0:
-                print("Sending data loop")
+                log("Sending data loop")
                 packet = ""
                 new_packet = ""
                 while len(packet.encode("utf-8", errors="strict")) + len(new_packet.encode("utf-8", errors="strict")) < 150:
@@ -113,17 +113,17 @@ class mylora(LoRa):
 
                 self.packet_queue.task_done()
 
-                print("Sending: " + str(packet))
+                log("Sending: " + str(packet))
                 sending_payload = get_message_bytes(packet)
-                print("Sending payload: " + str(sending_payload))
-                print("Sent payload: " + str(self.write_payload(sending_payload)))
+                log("Sending payload: " + str(sending_payload))
+                log("Sent payload: " + str(self.write_payload(sending_payload)))
                 self.set_dio_mapping([1, 0, 0, 0, 0, 0])
                 self.set_mode(MODE.TX)
                 while self.get_mode() == MODE.TX:
                     time.sleep(0.01)
-                print("Changed to mode: " + str(self.get_mode()))
+                log("Changed to mode: " + str(self.get_mode()))
                 self.set_dio_mapping([0, 0, 0, 0, 0, 0])
                 time.sleep(0.1)
 
-            print("Resetting loop")
+            log("Resetting loop")
             assert (self.get_agc_auto_on() == 1)

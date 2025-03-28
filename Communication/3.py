@@ -112,6 +112,7 @@ class mylora(LoRa):
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)  # Receiver mode
         while True:
+            assert (self.get_agc_auto_on() == 1)
             # print("Resetting loop")
             self.var = 0
             time.sleep(0.01)

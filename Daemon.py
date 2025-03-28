@@ -3,6 +3,7 @@ import psutil
 import datetime
 import subprocess
 import time
+import sys
 
 def log(message: any):
     try:
@@ -11,7 +12,8 @@ def log(message: any):
             print(message)
             f.write(message + '\n')
     except Exception as e:
-        print(f"log() error: {e}")
+        if len(sys.argv) > 2 and sys.argv[2] == "-d":
+            print(f"log() error: {e}")
 
 def kill_process(pid: int = -1, name: str = "this should never be in any of the process names"):
     try:
