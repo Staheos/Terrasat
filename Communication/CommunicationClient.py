@@ -28,7 +28,7 @@ class CommunicationClient(threading.Thread):
                 self.lora.set_sync_word(0x68)
                 self.lora.set_pa_config(pa_select=1, max_power=21, output_power=20)
                 self.lora.set_bw(BW.BW500)
-                self.lora.set_coding_rate(CODING_RATE.CR4_5)
+                self.lora.set_coding_rate(CODING_RATE.CR4_7)
                 self.lora.set_spreading_factor(8)
                 self.lora.set_rx_crc(True)
                 # self.lora.set_lna_gain(GAIN.G1)
@@ -36,7 +36,7 @@ class CommunicationClient(threading.Thread):
                 self.lora.set_low_data_rate_optim(False)
 
                 self.lora.set_pa_dac(1)
-                self.lora.set_ocp_trim(140)
+                self.lora.set_ocp_trim(200)
 
                 #  Medium Range  Defaults after init are 434.0MHz, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on 13 dBm
                 # self.lora.set_pa_config(pa_select=1)

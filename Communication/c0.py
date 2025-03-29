@@ -108,7 +108,7 @@ class mylora(LoRa):
 
                 if packet == "":
                     packet = "NODATA"
-                    time.sleep(0.1)
+                    time.sleep(0.15)
                     continue
 
                 self.packet_queue.task_done()

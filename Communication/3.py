@@ -143,7 +143,7 @@ lora.set_sync_word(0x68)
 #     Slow+long range  Bw = 125 kHz, Cr = 4/8, Sf = 4096chips/symbol, CRC on. 13 dBm
 lora.set_pa_config(pa_select=1, max_power=21, output_power=20)
 lora.set_bw(BW.BW500)
-lora.set_coding_rate(CODING_RATE.CR4_5)
+lora.set_coding_rate(CODING_RATE.CR4_7)
 lora.set_spreading_factor(8)
 lora.set_rx_crc(True)
 # lora.set_lna_gain(GAIN.G1)
@@ -151,7 +151,7 @@ lora.set_implicit_header_mode(False)
 lora.set_low_data_rate_optim(False)
 
 lora.set_pa_dac(1)
-lora.set_ocp_trim(140)
+lora.set_ocp_trim(200)
 
 #  Medium Range  Defaults after init are 434.0MHz, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on 13 dBm
 # lora.set_pa_config(pa_select=1)

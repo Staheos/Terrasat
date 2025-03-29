@@ -3,15 +3,25 @@ import time
 import pynmea2
 import time
 import datetime
+import sys
 import socket
 
+
+def is_debug() -> bool:
+    return len(sys.argv) >= 2 and sys.argv[1] == "-d"
+
+def log(data: any) -> None:
+    with open("gps_log.txt", "a") as f:
+        f.write(str(data) + "\n")
+    if is_debug():
+        log(data)
 
 def coord_to_int(coord: float) -> int:
     return int(coord * 10000000)
 
 def send_command(ser, command):
     """Send a command to the GPS module."""
-    print(f"Sending command: {command.strip()}")
+    log(f"Sending command: {command.strip()}")
     ser.write(command.encode())
     time.sleep(0.5)
 
@@ -42,31 +52,31 @@ def parse_gps_data(data) -> any:
     try:
         msg = pynmea2.parse(data)
         if isinstance(msg, pynmea2.types.talker.GGA):
-            print(f"\n--- GPS Data ---")
-            print(f"Timestamp (UTC): {msg.timestamp}")
-            print(f"Latitude: {msg.latitude} {msg.lat_dir}")
-            print(f"Longitude: {msg.longitude} {msg.lon_dir}")
-            print(f"Altitude: {msg.altitude} {msg.altitude_units}")
-            print(f"Number of Satellites: {msg.num_sats}")
-            print(f"Horizontal Dilution of Precision: {msg.horizontal_dil}")
-            print(f"Geoid Separation: {msg.geo_sep} {msg.geo_sep_units}")
-            print(f"----------------\n")
+            log(f"\n--- GPS Data ---")
+            log(f"Timestamp (UTC): {msg.timestamp}")
+            log(f"Latitude: {msg.latitude} {msg.lat_dir}")
+            log(f"Longitude: {msg.longitude} {msg.lon_dir}")
+            log(f"Altitude: {msg.altitude} {msg.altitude_units}")
+            log(f"Number of Satellites: {msg.num_sats}")
+            log(f"Horizontal Dilution of Precision: {msg.horizontal_dil}")
+            log(f"Geoid Separation: {msg.geo_sep} {msg.geo_sep_units}")
+            log(f"----------------\n")
             return msg
         elif isinstance(msg, pynmea2.types.talker.RMC):
-            print(f"\n--- GPS Data ---")
-            print(f"Timestamp (UTC): {msg.timestamp}")
-            print(f"Status: {msg.status}")
-            print(f"Latitude: {msg.latitude} {msg.lat_dir}")
-            print(f"Longitude: {msg.longitude} {msg.lon_dir}")
-            print(f"Speed Over Ground (knots): {msg.spd_over_grnd}")
-            print(f"True Course: {msg.true_course}")
-            print(f"Date: {msg.datestamp}")
-            print(f"Magnetic Variation: {msg.mag_variation} {msg.mag_var_dir}")
-            print(f"Mode Indicator: {msg.mode_indicator}")
-            print(f"----------------\n")
+            log(f"\n--- GPS Data ---")
+            log(f"Timestamp (UTC): {msg.timestamp}")
+            log(f"Status: {msg.status}")
+            log(f"Latitude: {msg.latitude} {msg.lat_dir}")
+            log(f"Longitude: {msg.longitude} {msg.lon_dir}")
+            log(f"Speed Over Ground (knots): {msg.spd_over_grnd}")
+            log(f"True Course: {msg.true_course}")
+            log(f"Date: {msg.datestamp}")
+            log(f"Magnetic Variation: {msg.mag_variation} {msg.mag_var_dir}")
+            log(f"Mode Indicator: {msg.mode_indicator}")
+            log(f"----------------\n")
             return msg
     except pynmea2.ParseError as e:
-        print(f"Failed to parse NMEA sentence: {e}")
+        log(f"Failed to parse NMEA sentence: {e}")
     return None
 
 while True:
@@ -133,19 +143,19 @@ while True:
 
                 timestamp = int(time.time() * 1000)
                 message = "GPS:" + str(timestamp) + "&" + message
-                print(message)
+                log(message)
                 if to_send and sending_count == 0:
                     client_socket.sendall(("HEAD" + message + "FOOT").encode(encoding="utf-8", errors="strict"))
                 sending_count = (sending_count + 1) % SENDING_PERIOD
                 open("gps_data.txt", 'a').write(message + '\n')
 
     except KeyboardInterrupt:
-        print("Exiting...")
+        log("Exiting...")
         break
     except Exception as e:
-        print(f"Error: {e}")
+        log(f"Error: {e}")
         try:
             open("gps_errors.txt", "a").write(f"[{datetime.datetime.now()}]  {e}\n")
             time.sleep(3)
         except Exception as e2:
-            print(f"Fatal: {e2}")
+            log(f"Fatal: {e2}")
